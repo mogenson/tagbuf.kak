@@ -10,6 +10,9 @@ declare-option -docstring "Display anonymous tags.
   Default value: true" \
 str tagbuf_display_anon 'true'
 
+declare-option -docstring "Command to generate tags file." \
+str tagbuf_ctags_cmd 'ctags'
+
 hook -group tagbuf-highlight global WinSetOption filetype=tagbuf %{
     add-highlighter window/tagbuf group
     add-highlighter window/tagbuf/category regex ^[^\s][^\n]+$ 0:keyword
@@ -32,7 +35,16 @@ define-command -docstring 'List tags in current buffer' tagbuf %{ evaluate-comma
     fifo="${tmp}/fifo"
     mkfifo ${fifo}
 
-    ctags --sort="${kak_opt_tagbuf_sort:-yes}" -f "$tags" "$kak_buffile" > /dev/null 2>&1
+    printf "%s\n" "hook global -always KakEnd .* %{ nop %sh{ rm -rf $tmp }}"
+
+    case ${kak_opt_tagbuf_ctags_cmd} in
+        ctags)
+            ctags="ctags --sort='${kak_opt_tagbuf_sort:-yes}' -f '$tags' '$kak_buffile'" ;;
+        ctags*|*)
+            ctags="${kak_opt_tagbuf_ctags_cmd} -f '$tags' '$kak_buffile'" ;;
+    esac
+
+    eval ${ctags} > /dev/null 2>&1
 
     eval "set -- $kak_opt_tagbuf_kinds"
     while [ $# -gt 0 ]; do
@@ -62,7 +74,7 @@ define-command -docstring 'List tags in current buffer' tagbuf %{ evaluate-comma
     printf "%s\n" "evaluate-commands -try-client '$kak_opt_toolsclient' %{
                        edit! -fifo ${fifo} *tagbuf*
                        set-option buffer filetype tagbuf
-                       map buffer normal '<ret>' '<a-h>;/: <c-v><c-i><ret><a-h>2<s-l><a-l><a-;>:<space>tagbuf-jump $kak_bufname<ret>'
+                       map buffer normal '<ret>' ': tagbuf-jump %{${kak_bufname}}<ret>'
                        try %{
                            set-option window tabstop 1
                            remove-highlighter window/wrap
@@ -76,14 +88,15 @@ define-command -docstring 'List tags in current buffer' tagbuf %{ evaluate-comma
 }}
 
 define-command -hidden tagbuf-jump -params 1 %{
+    execute-keys '<a-h>;/: <c-v><c-i><ret><a-h>2<s-l><a-l><a-;>'
     evaluate-commands %sh{
         printf "%s: \t%s\n" "$kak_selection" "$1" | awk -F ': \t' '{
                 keys = $2; gsub(/</, "<lt>", keys); gsub(/\t/, "<c-v><c-i>", keys);
-                gsub("&", "&&", keys); gsub("?", "??", keys);
+                gsub("&", "&&", keys); gsub("#", "##", keys);
                 select = $1; gsub(/</, "<lt>", select); gsub(/\t/, "<c-v><c-i>", select);
-                gsub("&", "&&", select); gsub("?", "??", select);
-                bufname = $3; gsub("&", "&&", bufname); gsub("?", "??", bufname);
-                print "try %? buffer %&" bufname "&; execute-keys %&/\\Q" keys "<ret>vc& ? catch %? echo -markup %&{Error}unable to find tag& ?; try %? execute-keys %&s\\Q" select "<ret>& ?"
+                gsub("&", "&&", select); gsub("#", "##", select);
+                bufname = $3; gsub("&", "&&", bufname); gsub("#", "##", bufname);
+                print "try %# buffer %&" bufname "&; execute-keys %&<esc>/\\Q" keys "<ret>vc& # catch %# echo -markup %&{Error}unable to find tag& #; try %# execute-keys %&s\\Q" select "<ret>& #"
             }'
     }
     try %{ focus %opt{jumpclient} }
@@ -234,7 +247,7 @@ try %{
     hook global WinSetOption filetype=man %{
         set-option window tagbuf_kinds 't' 'Titles' 's' 'Sections'
     }
-    hook global WinSetOption filetype=make %{
+    hook global WinSetOption filetype=makefile %{
         set-option window tagbuf_kinds 'm' 'Macros' 't' 'Targets' 'I' 'Makefiles'
     }
     hook global WinSetOption filetype=markdown %{
@@ -247,10 +260,10 @@ try %{
         set-option window tagbuf_kinds 'f' 'Functions' 'c' 'Constants' 'v' 'Variables' 't' 'Types' 'r' 'Traits' 'p' 'Packages'
     }
     hook global WinSetOption filetype=objectivec %{
-        set-option window tagbuf_kinds 'i' 'Class Interface' 'I' 'Class Implementation' 'P' 'Protocol' 'm' 'Object's method' 'c' 'Class' method' 'v' 'Global Variable' 'E' 'Object Field' 'f' 'A Function' 'p' 'A Property' 't' 'A Type Alias' 's' 'A Type Structure' 'e' 'An Enumeration' 'M' 'A Preprocessor Macro' 'C' 'Categories'
+        set-option window tagbuf_kinds 'i' 'Class Interface' 'I' 'Class Implementation' 'P' 'Protocol' 'm' 'Object''s method' 'c' 'Class'' method' 'v' 'Global Variable' 'E' 'Object Field' 'f' 'A Function' 'p' 'A Property' 't' 'A Type Alias' 's' 'A Type Structure' 'e' 'An Enumeration' 'M' 'A Preprocessor Macro' 'C' 'Categories'
     }
     hook global WinSetOption filetype=ocaml %{
-        set-option window tagbuf_kinds 'c' 'Classes' 'm' 'Object's method' 'M' 'Module Or Functor' 'v' 'Global Variable' 'p' 'Signature Item' 't' 'Type Name' 'f' 'A Function' 'C' 'A Constructor' 'r' 'A 'structure' Field' 'e' 'An Exception'
+        set-option window tagbuf_kinds 'c' 'Classes' 'm' 'Object''s method' 'M' 'Module Or Functor' 'v' 'Global Variable' 'p' 'Signature Item' 't' 'Type Name' 'f' 'A Function' 'C' 'A Constructor' 'r' 'A Structure Field' 'e' 'An Exception'
     }
     hook global WinSetOption filetype=passwd %{
         set-option window tagbuf_kinds 'u' 'User Names'

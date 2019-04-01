@@ -29,6 +29,7 @@ can use [universal-ctags][5]).
 Tagbuf.kak supports configuration via these options:
 - `tagbuf_sort` - affects tags sorting method in sections of the tagbuf buffer
 - `tagbuf_display_anon` - affects displaying of anonymous tags
+- `tagbuf_ctags_cmd` - command used to generate tags file (default: `ctags`)
 
 ## Usage
 Tagbuf.kak provides one command:
