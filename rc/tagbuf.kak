@@ -48,8 +48,8 @@ define-command -docstring 'List tags in current buffer' tagbuf %{ evaluate-comma
 
     eval "set -- $kak_opt_tagbuf_kinds"
     while [ $# -gt 0 ]; do
-        export description="$2"
-        readtags -t "$tags" -Q '(eq? $kind "'$1'")' -l | awk -F '\t|\n' '
+        export tagbuf_description="$2"
+        readtags -t "${tags}" -Q '(eq? $kind "'$1'")' -l | awk -F '\t|\n' '
             /^__anon[a-zA-Z0-9]+/ {
                 if ( ENVIRON["kak_opt_tagbuf_display_anon"] != "true" ) {
                     $0=""
@@ -63,7 +63,7 @@ define-command -docstring 'List tags in current buffer' tagbuf %{ evaluate-comma
             }
             END {
                 if (length(out) != 0) {
-                    print ENVIRON["description"]
+                    print ENVIRON["tagbuf_description"]
                     print out
                 }
             }
@@ -71,8 +71,8 @@ define-command -docstring 'List tags in current buffer' tagbuf %{ evaluate-comma
         shift 2
     done
 
-    printf "%s\n" "evaluate-commands -try-client '$kak_opt_toolsclient' %{
-                       edit! -fifo ${fifo} *tagbuf*
+    printf "%s\n" "evaluate-commands -try-client %opt{toolsclient} %{ try %{
+                       edit! -debug -fifo ${fifo} *tagbuf*
                        set-option buffer filetype tagbuf
                        map buffer normal '<ret>' ': tagbuf-jump %{${kak_bufname}}<ret>'
                        try %{
@@ -82,15 +82,15 @@ define-command -docstring 'List tags in current buffer' tagbuf %{ evaluate-comma
                            remove-highlighter window/whitespace
                            remove-highlighter window/wrap
                        }
-                   }"
+                   }}"
 
-    ( cat $tagbuf_buffer > $fifo; rm -rf $tmp ) > /dev/null 2>&1 < /dev/null &
+    ( cat ${tagbuf_buffer} > ${fifo}; rm -rf ${tmp} ) > /dev/null 2>&1 < /dev/null &
 }}
 
 define-command -hidden tagbuf-jump -params 1 %{
     execute-keys '<a-h>;/: <c-v><c-i><ret><a-h>2<s-l><a-l><a-;>'
     evaluate-commands %sh{
-        printf "%s: \t%s\n" "$kak_selection" "$1" | awk -F ': \t' '{
+        printf "%s: \t%s\n" "${kak_selection}" "$1" | awk -F ': \t' '{
                 keys = $2; gsub(/</, "<lt>", keys); gsub(/\t/, "<c-v><c-i>", keys);
                 gsub("&", "&&", keys); gsub("#", "##", keys);
                 select = $1; gsub(/</, "<lt>", select); gsub(/\t/, "<c-v><c-i>", select);
