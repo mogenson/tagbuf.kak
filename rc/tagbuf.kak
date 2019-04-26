@@ -352,7 +352,7 @@ try %{
     hook global WinSetOption filetype=tcloo %{
         set-option window tagbuf_kinds 'c' 'Classes' 'm' 'Methods'
     }
-    hook global WinSetOption filetype=tex %{
+    hook global WinSetOption filetype=latex %{
         set-option window tagbuf_kinds 'p' 'Parts' 'c' 'Chapters' 's' 'Sections' 'u' 'Subsections' 'b' 'Subsubsections' 'P' 'Paragraphs' 'G' 'Subparagraphs' 'l' 'Labels' 'i' 'Includes'
     }
     hook global WinSetOption filetype=ttcn %{
