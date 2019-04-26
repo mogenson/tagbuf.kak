@@ -21,9 +21,9 @@ Clone this repo, and place `tagbuf.kak` to your autoload directory, or source it
 manually.
 
 ## Dependencies
-For this plugin to work, you need working [ctags][2] and [readtags][3] programs.
-Note that [readtags][3] isn't shipped with [exuberant-ctags][2] by default (you
-can use [universal-ctags][5]).
+For this plugin to function, you need working [ctags][2] and [readtags][3]
+programs. Note that [readtags][3] isn't shipped with older ctags
+implementations. [universal-ctags][2] is recommended.
 
 ## Configuration
 Tagbuf.kak supports configuration via these options:
@@ -39,7 +39,6 @@ In `*tagbuf*` buffer you can use <kbd>Ret</kbd> key to jump to the definition of
 the tag.
 
 [1]: https://github.com/andreyorst/tagbar.kak
-[2]: http://ctags.sourceforge.net/
-[3]: http://ctags.sourceforge.net/tool_support.html
+[2]: https://ctags.io/
+[3]: http://docs.ctags.io/en/latest/news.html#readtags
 [4]: https://github.com/andreyorst/plug.kak
-[5]: https://github.com/universal-ctags
