@@ -26,68 +26,69 @@ hook -group tagbuf-highlight global WinSetOption filetype=tagbuf %{
 define-command -docstring 'List tags in current buffer' tagbuf %{
     tagbuf-set-kinds
     evaluate-commands %sh{
-    if [ -z "$kak_opt_tagbuf_kinds" ]; then
-        printf "%s\n" "echo -markup %{{Information}Filetype '$kak_opt_filetype' is not supported by tagbuf}"
-        exit
-    fi
+        if [ -z "${kak_opt_tagbuf_kinds}" ]; then
+            printf %s\\n "echo -markup %{{Information}Filetype '${kak_opt_filetype}' is not supported by Tagbuf}"
+            exit
+        fi
 
-    tmp=$(mktemp -d "${TMPDIR:-/tmp}/tagbuf.XXXXXXXX")
-    tags="$tmp/tags"
-    tagbuf_buffer="$tmp/buffer"
-    fifo="${tmp}/fifo"
-    mkfifo ${fifo}
+        tmp=$(mktemp -d "${TMPDIR:-/tmp}/tagbuf.XXXXXXXX")
+        tags="$tmp/tags"
+        buffer="$tmp/buffer"
+        fifo="${tmp}/fifo"
+        mkfifo ${fifo}
 
-    printf "%s\n" "hook global -always KakEnd .* %{ nop %sh{ rm -rf $tmp }}"
+        printf %s\\n "hook global -always KakEnd .* %{ nop %sh{ rm -rf $tmp }}"
 
-    case ${kak_opt_tagbuf_ctags_cmd} in
-        ctags)
-            ctags="ctags --sort='${kak_opt_tagbuf_sort:-yes}' -f '$tags' '$kak_buffile'" ;;
-        ctags*|*)
-            ctags="${kak_opt_tagbuf_ctags_cmd} -f '$tags' '$kak_buffile'" ;;
-    esac
+        case ${kak_opt_tagbuf_ctags_cmd} in
+            ctags)
+                ctags="ctags --sort='${kak_opt_tagbuf_sort:-yes}' -f '$tags' '${kak_buffile}'" ;;
+            ctags*|*)
+                ctags="${kak_opt_tagbuf_ctags_cmd} -f '$tags' '${kak_buffile}'" ;;
+        esac
 
-    eval ${ctags} > /dev/null 2>&1
+        eval ${ctags} > /dev/null 2>&1
 
-    eval "set -- ${kak_quoted_opt_tagbuf_kinds}"
-    while [ $# -gt 0 ]; do
-        export tagbuf_description="$2"
-        readtags -t "${tags}" -Q '(eq? $kind "'$1'")' -l | awk -F '\t|\n' '
-            /^__anon[a-zA-Z0-9]+/ {
-                if ( ENVIRON["kak_opt_tagbuf_display_anon"] != "true" ) {
-                    $0=""
+        eval "set -- ${kak_quoted_opt_tagbuf_kinds}"
+        while [ $# -gt 0 ]; do
+            export tagbuf_description="$2"
+            readtags -t "${tags}" -Q '(eq? $kind "'$1'")' -l | awk -F '\t|\n' '
+                /^__anon[a-zA-Z0-9]+/ {
+                    if ( ENVIRON["kak_opt_tagbuf_display_anon"] != "true" ) {
+                        $0=""
+                    }
                 }
-            }
-            /[^\t]+\t[^\t]+\t\/\^.*\$?\// {
-                tag = $1;
-                info = $0; sub(".*\t/\\^", "", info); sub("\\$?/$", "", info); gsub(/^[\t ]+/, "", info); gsub("\\\\/", "/", info);
-                if (length(info) != 0)
-                    out = out "  " tag ": \t" info "\n"
-            }
-            END {
-                if (length(out) != 0) {
-                    print ENVIRON["tagbuf_description"]
-                    print out
+                /[^\t]+\t[^\t]+\t\/\^.*\$?\// {
+                    tag = $1;
+                    info = $0; sub(".*\t/\\^", "", info); sub("\\$?/$", "", info); gsub(/^[\t ]+/, "", info); gsub("\\\\/", "/", info);
+                    if (length(info) != 0)
+                        out = out "  " tag ": \t" info "\n"
                 }
-            }
-        ' >> $tagbuf_buffer
-        shift 2
-    done
+                END {
+                    if (length(out) != 0) {
+                        print ENVIRON["tagbuf_description"]
+                        print out
+                    }
+                }
+            ' >> $buffer
+            shift 2
+        done
 
-    printf "%s\n" "evaluate-commands -try-client %opt{toolsclient} %{ try %{
-                       edit! -debug -fifo ${fifo} *tagbuf*
-                       set-option buffer filetype tagbuf
-                       map buffer normal '<ret>' ': tagbuf-jump %{${kak_bufname}}<ret>'
-                       try %{
-                           set-option window tabstop 1
-                           remove-highlighter window/wrap
-                           remove-highlighter window/numbers
-                           remove-highlighter window/whitespace
-                           remove-highlighter window/wrap
-                       }
-                   }}"
+        printf %s\\n "evaluate-commands -try-client %opt{toolsclient} %{ try %{
+                           edit! -debug -fifo ${fifo} *tagbuf*
+                           set-option buffer filetype tagbuf
+                           map buffer normal '<ret>' ': tagbuf-jump %{${kak_bufname}}<ret>'
+                           try %{
+                               set-option window tabstop 1
+                               remove-highlighter window/wrap
+                               remove-highlighter window/numbers
+                               remove-highlighter window/whitespace
+                               remove-highlighter window/wrap
+                           }
+                       }}"
 
-    ( cat ${tagbuf_buffer} > ${fifo}; rm -rf ${tmp} ) > /dev/null 2>&1 < /dev/null &
-}}
+        ( cat ${buffer} > ${fifo}; rm -rf ${tmp} ) > /dev/null 2>&1 < /dev/null &
+    }
+}
 
 define-command -hidden tagbuf-jump -params 1 %{
     execute-keys '<a-h>;/: <c-v><c-i><ret><a-h>2<s-l><a-l><a-;>'
@@ -106,8 +107,8 @@ define-command -hidden tagbuf-jump -params 1 %{
 
 
 define-command -hidden tagbuf-set-kinds %{ evaluate-commands %sh{
-    [ -n "$kak_opt_tagbuf_kinds" ] && exit
-    case $kak_opt_filetype in
+    [ -n "${kak_opt_tagbuf_kinds}" ] && exit
+    case ${kak_opt_filetype} in
         ada)                 printf "set-option window tagbuf_kinds 'P' 'Package Specifications' 'p' 'Packages' 't' 'Types' 'u' 'Subtypes' 'c' 'Record Type Components' 'l' 'Enum Type Literals' 'v' 'Variables' 'f' 'Generic Formal Parameters' 'n' 'Constants' 'x' 'User Defined Exceptions' 'R' 'Subprogram Specifications' 'r' 'Subprograms' 'K' 'Task Specifications' 'k' 'Tasks' 'O' 'Protected Data Specifications' 'o' 'Protected Data' 'e' 'Task/Protected Data Entries' 'b' 'Labels' 'i' 'Loop/Declare Identifiers' 'S' 'Ctags Internal Use'" ;;
         ant)                 printf "set-option window tagbuf_kinds 'p' 'Projects' 't' 'Targets' 'P' 'Properties' 'i' 'Antfiles'" ;;
         asciidoc)            printf "set-option window tagbuf_kinds 'c' 'Chapters' 's' 'Sections' 'S' 'Level 2 Sections' 't' 'Level 3 Sections' 'T' 'Level 4 Sections' 'u' 'Level 5 Sections' 'a' 'Anchors'" ;;
@@ -210,7 +211,7 @@ define-command -hidden tagbuf-set-kinds %{ evaluate-commands %sh{
         xslt)                printf "set-option window tagbuf_kinds 's' 'Stylesheets' 'p' 'Parameters' 'm' 'Matched Template' 'n' 'Matched Template' 'v' 'Variables'" ;;
         yaml)                printf "set-option window tagbuf_kinds 'a' 'Anchors'" ;;
         ansibleplaybook)     printf "set-option window tagbuf_kinds 'p' 'Plays'" ;;
-        nim)                 [ -n "$(command -v ntags)" ] && printf "%s\n" "set-option window tagbuf_ctags_cmd 'ntags'
+        nim)                 [ -n "$(command -v ntags)" ] && printf %s\\n "set-option window tagbuf_ctags_cmd 'ntags'
                                                                             set-option window tagbuf_kinds 'f' 'Procedures' 't' 'Types' 'v' 'Variables'" ;;
         *) ;;
     esac
