@@ -48,7 +48,7 @@ define-command -docstring 'List tags in current buffer' tagbuf %{
 
     eval ${ctags} > /dev/null 2>&1
 
-    eval "set -- $kak_opt_tagbuf_kinds"
+    eval "set -- ${kak_quoted_opt_tagbuf_kinds}"
     while [ $# -gt 0 ]; do
         export tagbuf_description="$2"
         readtags -t "${tags}" -Q '(eq? $kind "'$1'")' -l | awk -F '\t|\n' '
