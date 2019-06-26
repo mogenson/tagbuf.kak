@@ -13,6 +13,9 @@ str tagbuf_display_anon 'true'
 declare-option -docstring "Command to generate tags file." \
 str tagbuf_ctags_cmd 'ctags'
 
+declare-option -docstring "Command to read tags file." \
+str tagbuf_readtags_cmd 'readtags'
+
 declare-option -hidden str-list tagbuf_kinds
 
 hook -group tagbuf-highlight global WinSetOption filetype=tagbuf %{
@@ -51,7 +54,7 @@ define-command -docstring 'List tags in current buffer' tagbuf %{
         eval "set -- ${kak_quoted_opt_tagbuf_kinds}"
         while [ $# -gt 0 ]; do
             export tagbuf_description="$2"
-            readtags -t "${tags}" -Q '(eq? $kind "'$1'")' -l | awk -F '\t|\n' '
+            ${kak_opt_tagbuf_readtags_cmd} -t "${tags}" -Q '(eq? $kind "'$1'")' -l | awk -F '\t|\n' '
                 /^__anon[a-zA-Z0-9]+/ {
                     if ( ENVIRON["kak_opt_tagbuf_display_anon"] != "true" ) {
                         $0=""
